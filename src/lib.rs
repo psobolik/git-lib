@@ -15,6 +15,7 @@ pub mod git_command;
 pub struct GitLib {}
 
 impl GitLib {
+    /// Add a Git remote to a local repository
     pub fn remote_add(
         repo: &str,
         url: &str,
