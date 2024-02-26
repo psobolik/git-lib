@@ -19,7 +19,7 @@ pub struct Credentials {
 }
 
 impl Credentials {
-    pub fn with_url(url: &str) -> Credentials {
+    pub fn with_url<T: ToString>(url: T) -> Credentials {
         Credentials {
             url: Some(url.to_string()),
             username: None,
@@ -33,7 +33,11 @@ impl Credentials {
         }
     }
 
-    pub fn with_url_username_password(url: &str, username: &str, password: &str) -> Credentials {
+    pub fn with_url_username_password<T: ToString>(
+        url: T,
+        username: T,
+        password: T,
+    ) -> Credentials {
         Credentials {
             url: Some(url.to_string()),
             username: Some(username.to_string()),
@@ -47,32 +51,32 @@ impl Credentials {
         }
     }
 
-    pub fn protocol(&self) -> Option<String> {
-        self.protocol.to_owned()
+    pub fn protocol(&self) -> &Option<String> {
+        &self.protocol
     }
-    pub fn host(&self) -> Option<String> {
-        self.host.to_owned()
+    pub fn host(&self) -> &Option<String> {
+        &self.host
     }
-    pub fn path(&self) -> Option<String> {
-        self.path.to_owned()
+    pub fn path(&self) -> &Option<String> {
+        &self.path
     }
-    pub fn username(&self) -> Option<String> {
-        self.username.to_owned()
+    pub fn username(&self) -> &Option<String> {
+        &self.username
     }
-    pub fn password(&self) -> Option<String> {
-        self.password.to_owned()
+    pub fn password(&self) -> &Option<String> {
+        &self.password
     }
-    pub fn password_expiry_utc(&self) -> Option<String> {
-        self.password_expiry_utc.to_owned()
+    pub fn password_expiry_utc(&self) -> &Option<String> {
+        &self.password_expiry_utc
     }
-    pub fn oauth_refresh_token(&self) -> Option<String> {
-        self.oauth_refresh_token.to_owned()
+    pub fn oauth_refresh_token(&self) -> &Option<String> {
+        &self.oauth_refresh_token
     }
-    pub fn url(&self) -> Option<String> {
-        self.url.to_owned()
+    pub fn url(&self) -> &Option<String> {
+        &self.url
     }
-    pub fn wwwauth(&self) -> Option<Vec<String>> {
-        self.wwwauth.to_owned()
+    pub fn wwwauth(&self) -> &Option<Vec<String>> {
+        &self.wwwauth
     }
 }
 
@@ -145,7 +149,7 @@ impl Display for Credentials {
         fn maybe_writeln(
             f: &mut Formatter<'_>,
             key: &str,
-            value: Option<String>,
+            value: &Option<String>,
         ) -> std::fmt::Result {
             if let Some(value) = value {
                 writeln!(f, "{key}={value}")?

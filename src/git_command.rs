@@ -4,6 +4,7 @@
  */
 
 pub mod error;
+pub use error::Error;
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -13,10 +14,11 @@ pub struct GitCommand {}
 
 impl GitCommand {
     /// Runs a Git command and returns its output if it succeeds.
-    pub fn git_command(
+    /// The payload can be anything that can be converted to a string
+    pub fn git_command<T: ToString>(
         git_command: &str,
         args: Option<Vec<&str>>,
-        payload: Option<&str>,
+        payload: Option<T>,
         current_dir: Option<&PathBuf>,
     ) -> Result<String, error::Error> {
         let output = GitCommand::run_git_command(git_command, args, payload, current_dir)?;
@@ -35,22 +37,21 @@ impl GitCommand {
 }
 
 impl GitCommand {
-    /// Returns a vector that includes a Git command and its (optional) subcommand, arguments, etc.
+    /// Returns a vector that includes a Git command and any subcommands, arguments, etc.
     fn git_args<'a>(command: &'a str, args: Option<Vec<&'a str>>) -> Vec<&'a str> {
         let mut git_args = vec![command];
         if let Some(args) = args {
-            for arg in args {
-                git_args.push(arg);
-            }
+            git_args.extend(&args);
         }
         git_args
     }
 
     /// Runs a Git command and returns its output
-    pub fn run_git_command(
+    /// The payload can be anything that can be converted to a string
+    pub fn run_git_command<T: ToString>(
         git_command: &str,
         args: Option<Vec<&str>>,
-        payload: Option<&str>,
+        payload: Option<T>,
         current_dir: Option<&PathBuf>,
     ) -> Result<Output, error::Error> {
         let mut command = Command::new("git");
@@ -64,6 +65,8 @@ impl GitCommand {
         match command.spawn() {
             Ok(mut child_process) => {
                 if let Some(payload) = payload {
+                    let mut payload = payload.to_string();
+                    payload.push('\n');
                     match child_process.stdin.take() {
                         Some(mut stdin) => match stdin.write_all(payload.as_bytes()) {
                             Ok(_) => {}

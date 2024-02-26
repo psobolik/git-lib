@@ -3,9 +3,8 @@
  * Created 2024-02-09
  */
 
-use crate::credentials::Credentials;
-use crate::git_command::error::Error as GitCommandError;
-use crate::git_command::GitCommand;
+pub use crate::credentials::Credentials;
+use crate::git_command::{Error as GitCommandError, GitCommand};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -21,22 +20,22 @@ impl GitLib {
         url: &str,
         path: Option<&PathBuf>,
     ) -> Result<(), GitCommandError> {
-        let _ = GitCommand::git_command(
+        let _ = GitCommand::git_command::<String>(
             "remote",
             Some(vec!["add", repo, url]),
             None,
-            Some(&GitLib::path(path.cloned())),
+            Some(&Self::path(path.cloned())),
         )?;
         Ok(())
     }
 
     /// Ask Git for the first URL of the named remote
     pub fn remote_url(repo: &str, path: Option<&PathBuf>) -> Result<String, GitCommandError> {
-        let output = GitCommand::git_command(
+        let output = GitCommand::git_command::<String>(
             "remote",
             Some(vec!["get-url", repo]),
             None,
-            Some(&GitLib::path(path.cloned())),
+            Some(&Self::path(path.cloned())),
         )?;
         Ok(output.trim_end_matches('\n').to_owned())
     }
@@ -46,22 +45,22 @@ impl GitLib {
     /// work tree, but in fact it will fail to run, because
     /// "fatal: not a git repository (or any of the parent directories): .git".
     pub fn is_inside_work_tree(path: Option<&PathBuf>) -> Result<bool, GitCommandError> {
-        let _ = GitCommand::git_command(
+        let _ = GitCommand::git_command::<String>(
             "rev-parse",
             Some(vec!["--is-inside-work-tree"]),
             None,
-            Some(&GitLib::path(path.cloned())),
+            Some(&Self::path(path.cloned())),
         )?;
         Ok(true)
     }
 
     /// Ask Git for the working directory related to a path.
     pub fn top_level(path: Option<&PathBuf>) -> Result<PathBuf, GitCommandError> {
-        let output = GitCommand::git_command(
+        let output = GitCommand::git_command::<String>(
             "rev-parse",
             Some(vec!["--show-toplevel"]),
             None,
-            Some(&GitLib::path(path.cloned())),
+            Some(&Self::path(path.cloned())),
         )?;
         match PathBuf::from_str(output.trim_end_matches('\n')) {
             Ok(path) => Ok(path),
@@ -73,13 +72,8 @@ impl GitLib {
     /// Ask Git to fill in the username and password for the given url and return the full credentials.
     pub fn credentials_fill(url: &str) -> Result<Credentials, GitCommandError> {
         let credentials = Credentials::with_url(url);
-        let description = format!("{}\n", credentials);
-        let output = GitCommand::git_command(
-            "credential",
-            Some(vec!["fill"]),
-            Some(description.as_str()),
-            None,
-        )?;
+        let output =
+            GitCommand::git_command("credential", Some(vec!["fill"]), Some(credentials), None)?;
         match Credentials::from_str(output.as_str()) {
             Ok(credentials) => Ok(credentials),
             Err(_) => Err(GitCommandError::new(
@@ -90,25 +84,15 @@ impl GitLib {
 
     /// Tell Git that the given credentials were accepted by an operation.
     pub fn credentials_approve(credentials: &Credentials) -> Result<(), GitCommandError> {
-        let description = format!("{}\n", credentials);
-        let _ = GitCommand::git_command(
-            "credential",
-            Some(vec!["approve"]),
-            Some(description.as_str()),
-            None,
-        )?;
+        let _ =
+            GitCommand::git_command("credential", Some(vec!["approve"]), Some(credentials), None)?;
         Ok(())
     }
 
     /// Tell Git that the given credentials were rejected by an operation.
     pub fn credentials_reject(credentials: &Credentials) -> Result<(), GitCommandError> {
-        let description = format!("{}\n", credentials);
-        let _ = GitCommand::git_command(
-            "credential",
-            Some(vec!["reject"]),
-            Some(description.as_str()),
-            None,
-        )?;
+        let _ =
+            GitCommand::git_command("credential", Some(vec!["reject"]), Some(credentials), None)?;
         Ok(())
     }
 }
@@ -145,8 +129,14 @@ fn credential() {
         GitLib::credentials_fill(url).expect("Failed to fill credentials (approved)");
 
     // Verify that the username and password are what are expected
-    assert_eq!(credentials_fill.username(), Some(username.to_owned()));
-    assert_eq!(credentials_fill.password(), Some(password.to_owned()));
+    assert_eq!(
+        credentials_fill.username().as_ref(),
+        Some(&username.to_string())
+    );
+    assert_eq!(
+        credentials_fill.password().as_ref(),
+        Some(&password.to_string())
+    );
 
     // Remove the credentials for the url from the credential manager
     GitLib::credentials_reject(&credentials_fill).expect("Failed to reject credentials");
@@ -155,8 +145,8 @@ fn credential() {
     // The user is expected to cancel the dialog.
     let credentials_fill =
         GitLib::credentials_fill(url).expect("Failed to fill credentials (rejected)");
-    assert_eq!(credentials_fill.username(), Some("".to_owned()));
-    assert_eq!(credentials_fill.password(), Some("".to_owned()));
+    assert_eq!(credentials_fill.username().as_ref(), Some(&"".to_string()));
+    assert_eq!(credentials_fill.password().as_ref(), Some(&"".to_string()));
 }
 
 #[test]
